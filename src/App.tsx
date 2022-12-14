@@ -6,32 +6,31 @@ import Main from "./component/Main";
 import SignIn from "./component/SignIn";
 import { auth } from "./component/firebase";
 
-type User = {
-  currentUser: User | null | undefined;
-};
+// type User = {
+//   currentUser: User | null | undefined;
+// };
 
-export const TestContext = createContext<User>({ currentUser: undefined });
+export const UserContext = createContext({ currentUser: null });
 
 function App() {
   const [currentUser, setCurrentUser] = useState<any>(undefined);
-
   const [user] = useAuthState(auth);
+
   useEffect(() => {
     setCurrentUser(user);
-    console.log(TestContext);
   }, [user]);
 
-  const contextValue = currentUser;
+  const userValue = { currentUser, setCurrentUser };
 
   return (
-    <TestContext.Provider value={{ currentUser: currentUser }}>
+    <UserContext.Provider value={userValue}>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<SignIn />} />
           <Route path="/Main" element={<Main />} />
         </Routes>
       </BrowserRouter>
-    </TestContext.Provider>
+    </UserContext.Provider>
   );
 }
 

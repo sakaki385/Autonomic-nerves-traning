@@ -2,13 +2,18 @@ import React, { useState, useEffect, useContext } from "react";
 import { auth, provider, db, analytics } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { signInWithPopup } from "firebase/auth";
-import { TestContext } from "../App";
+import { useNavigate } from "react-router-dom";
+import { UserContext } from "../App";
 
 const Main = () => {
   const [user] = useAuthState(auth);
   const [date, setDate] = useState("");
-  const value = useContext(TestContext);
+  const navigate = useNavigate();
+  const userContext = useContext(UserContext);
+
+  const [points, setPoints] = useState(Array(15).fill(2));
+  const [scores, setScores] = useState();
+  const [answers, setAnswer] = useState("");
 
   //日付の追加。setDateでdateに日付が入る
   useEffect(() => {
@@ -18,8 +23,22 @@ const Main = () => {
       ("0" + (date.getMonth() + 1)).slice(-2) +
       ("0" + date.getDate()).slice(-2);
     setDate(createDate);
-    console.log(value);
   }, []);
+
+  //ユーザーが空ならサインインページへ
+  useEffect(() => {
+    if (user === null) {
+      navigate("/");
+    }
+  }, [user]);
+
+  //ラジオボタンに変更があったら総合点を計算
+  useEffect(() => {
+    const totalScore = points.reduce((acc, currentValue) => {
+      return acc + currentValue;
+    });
+    setScores(totalScore);
+  }, [points]);
 
   //質問の配列
   const [questions, setQuestions] = useState([
@@ -46,10 +65,6 @@ const Main = () => {
     { id: 15, question: "寝る前にパソコンやスマホを見ないで眠れましたか？" },
   ]);
 
-  const [points, setPoints] = useState(Array(15).fill(2));
-  const [scores, setScores] = useState();
-  const [answers, setAnswer] = useState("");
-
   // 点数を計算
   const ScoreCalculation = () => {
     const totalScore = points.reduce((acc, currentValue) => {
@@ -70,20 +85,13 @@ const Main = () => {
     newAnswer(totalScore);
   };
 
-  useEffect(() => {
-    const totalScore = points.reduce((acc, currentValue) => {
-      return acc + currentValue;
-    });
-    setScores(totalScore);
-  }, [points]);
-
   // ポイント書き換え
   // インデックス番号と加算したい数字を受け取って、setPointsで受け取ったインデックス番号と合うオブジェクトのみnewPointで書き換える
   const handleChangePoints = (i: number, newPoint: number) => {
     setPoints(points.map((point, index) => (index === i ? newPoint : point)));
   };
 
-  //getの処理
+  //Getの処理
   const GetUserInfo = async () => {
     const docRef = doc(db, "users", "3Se1DqTfAdTgNjoKiAug");
     const docSnap = await getDoc(docRef);
@@ -92,7 +100,7 @@ const Main = () => {
     console.log(TestDocSnap.data());
     console.log(user);
   };
-
+  //Postの処理
   const PostUserInfo = async () => {
     ScoreCalculation();
     const userPost = doc(db, "users", user!.uid, date, "data");
@@ -102,23 +110,19 @@ const Main = () => {
       result: scores,
     });
   };
-
-  const SignOut = () => {
-    return (
-      <>
-        <button onClick={() => auth.signOut()}>サインアウト</button>
-      </>
-    );
+  //サインアウト処理
+  const handleSignOut = () => {
+    auth.signOut();
   };
 
   return (
     <div className="loginform">
       {user ? (
         <div>
-          {SignOut()}
+          <button onClick={handleSignOut}>サインアウト</button>
           <button onClick={GetUserInfo}>Get</button>
           <button onClick={PostUserInfo}>Post</button>
-          <p>{`こんにちは！${user.displayName}さん`}</p>
+          <p>{`こんにちは！${user!.displayName}さん`}</p>
           <div>
             <h3>昨日の生活について思い出してみてください。</h3>
 
@@ -165,7 +169,6 @@ const Main = () => {
             <button
               type="submit"
               onClick={() => {
-                // ScoreCalculation();
                 PostUserInfo();
               }}
             >
