@@ -3,43 +3,18 @@ import { auth, provider, db, analytics } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useNavigate } from "react-router-dom";
-import { UserContext } from "../App";
+import { GoogleUserContext } from "../App";
 
 const Main = () => {
   const [user] = useAuthState(auth);
   const [date, setDate] = useState("");
   const navigate = useNavigate();
-  const userContext = useContext(UserContext);
-
+  //const userContext = useContext(GoogleUserContext);
+  const [getDate, setGetDate] = useState<string>("");
   const [points, setPoints] = useState(Array(15).fill(2));
   const [scores, setScores] = useState();
   const [answers, setAnswer] = useState("");
-
-  //日付の追加。setDateでdateに日付が入る
-  useEffect(() => {
-    const date = new Date();
-    const createDate =
-      String(date.getFullYear()) +
-      ("0" + (date.getMonth() + 1)).slice(-2) +
-      ("0" + date.getDate()).slice(-2);
-    setDate(createDate);
-  }, []);
-
-  //ユーザーが空ならサインインページへ
-  useEffect(() => {
-    if (user === null) {
-      navigate("/");
-    }
-  }, [user]);
-
-  //ラジオボタンに変更があったら総合点を計算
-  useEffect(() => {
-    const totalScore = points.reduce((acc, currentValue) => {
-      return acc + currentValue;
-    });
-    setScores(totalScore);
-  }, [points]);
-
+  const [result, setResult] = useState<any>();
   //質問の配列
   const [questions, setQuestions] = useState([
     { id: 1, question: "朝起きて日光は浴びましたか？" },
@@ -65,6 +40,36 @@ const Main = () => {
     { id: 15, question: "寝る前にパソコンやスマホを見ないで眠れましたか？" },
   ]);
 
+  //日付の追加。setDateでdateに日付が入る（POSTでFireStoreのコレクション名になる）
+  useEffect(() => {
+    const date = new Date();
+    const createDate =
+      String(date.getFullYear() + "-") +
+      ("0" + (date.getMonth() + 1) + "-").slice(-3) +
+      ("0" + date.getDate()).slice(-2);
+    setDate(createDate);
+    console.log(user);
+  }, []);
+
+  //ユーザーが空ならサインインページへ
+  useEffect(() => {
+    if (user === null) {
+      navigate("/");
+    }
+  }, [user]);
+
+  //ラジオボタンに変更があったら総合点を計算
+  useEffect(() => {
+    const totalScore = points.reduce((acc, currentValue) => {
+      return acc + currentValue;
+    });
+    setScores(totalScore);
+  }, [points]);
+
+  //サインアウト処理
+  const handleSignOut = () => {
+    auth.signOut();
+  };
   // 点数を計算
   const ScoreCalculation = () => {
     const totalScore = points.reduce((acc, currentValue) => {
@@ -85,34 +90,40 @@ const Main = () => {
     newAnswer(totalScore);
   };
 
-  // ポイント書き換え
-  // インデックス番号と加算したい数字を受け取って、setPointsで受け取ったインデックス番号と合うオブジェクトのみnewPointで書き換える
+  // ポイント書き換え。インデックス番号と加算したい数字を受け取って、setPointsで受け取ったインデックス番号と合うオブジェクトのみnewPointで書き換える
   const handleChangePoints = (i: number, newPoint: number) => {
     setPoints(points.map((point, index) => (index === i ? newPoint : point)));
   };
 
-  //Getの処理
+  //!Getの処理（途中）
   const GetUserInfo = async () => {
-    const docRef = doc(db, "users", "3Se1DqTfAdTgNjoKiAug");
+    const docRef = doc(db, "users", user!.uid, getDate, "data");
     const docSnap = await getDoc(docRef);
-    const TestDocRef = doc(db, "users", user!.uid);
-    const TestDocSnap = await getDoc(TestDocRef);
-    console.log(TestDocSnap.data());
+    console.log(docSnap.data());
+    setResult(docSnap.data());
     console.log(user);
+    return <h2>{`結果は${docSnap}でした`}</h2>;
   };
+  const handleGetDate = (date: any) => {
+    setGetDate(date);
+    console.log(getDate);
+  };
+
   //Postの処理
   const PostUserInfo = async () => {
     ScoreCalculation();
     const userPost = doc(db, "users", user!.uid, date, "data");
 
     await setDoc(userPost, {
-      name: user?.displayName,
       result: scores,
     });
   };
-  //サインアウト処理
-  const handleSignOut = () => {
-    auth.signOut();
+
+  //Googleログインしてたら名前を表示
+  const HelloMessage = () => {
+    if (user!.displayName) {
+      return <p>こんにちは{user!.displayName}さん</p>;
+    }
   };
 
   return (
@@ -120,9 +131,19 @@ const Main = () => {
       {user ? (
         <div>
           <button onClick={handleSignOut}>サインアウト</button>
-          <button onClick={GetUserInfo}>Get</button>
-          <button onClick={PostUserInfo}>Post</button>
-          <p>{`こんにちは！${user!.displayName}さん`}</p>
+          <input
+            type="date"
+            value={getDate}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              handleGetDate(e.target.value);
+            }}
+          ></input>
+          <button onClick={GetUserInfo}>記録を見る</button>
+          <div>
+            {result === undefined ? "" : <h2>{`${result.result}点でした`}</h2>}
+          </div>
+          {HelloMessage()}
+
           <div>
             <h3>昨日の生活について思い出してみてください。</h3>
 
