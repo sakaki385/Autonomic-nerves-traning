@@ -18,9 +18,11 @@ const SignUp = () => {
     createUserWithEmailAndPassword(auth, email, password).then(() => {
       if (auth.currentUser !== null) {
         sendEmailVerification(auth.currentUser);
+        window.alert(
+          "確認メールを送信しました。\nメールのURLからユーザー登録を完成させてください。"
+        );
       }
-      //ここでログイン状態になっていて、サインインページに飛ぶと自動的にMainに飛ばされる
-      console.log(auth.currentUser);
+      //一度サインインページに戻す。
       navigate("/");
     });
   };
@@ -28,27 +30,27 @@ const SignUp = () => {
   return (
     <div>
       <h2>新規登録</h2>
-      <input
-        type="email"
-        placeholder="email"
-        value={email}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-          setEmail(e.target.value);
-        }}
-      />
-      <br />
-      <input
-        type="password"
-        placeholder="password"
-        value={password}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-          setPassword(e.target.value);
-        }}
-      />
-      <br />
-      <button type="submit" onSubmit={handleSubmit}>
-        送信
-      </button>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="email"
+          placeholder="email"
+          value={email}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            setEmail(e.target.value);
+          }}
+        />
+        <br />
+        <input
+          type="password"
+          placeholder="password"
+          value={password}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            setPassword(e.target.value);
+          }}
+        />
+        <br />
+        <button type="submit">送信</button>
+      </form>
     </div>
   );
 };

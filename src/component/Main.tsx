@@ -102,7 +102,6 @@ const Main = () => {
     console.log(docSnap.data());
     setResult(docSnap.data());
     console.log(user);
-    return <h2>{`結果は${docSnap}でした`}</h2>;
   };
   const handleGetDate = (date: any) => {
     setGetDate(date);
